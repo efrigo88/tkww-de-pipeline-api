@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "TKWW Take Home Test"
+version = "0.1.0"
+description = ""
+authors = ["Emiliano Frigo"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+flask = ">=2.0.1"
+pyspark = ">=3.1.2"
+pytest = "^7.2.1"
+pre-commit = "^3.0.4"
+pytest-cov = "^4.0.0"
+pylint = "^2.17.4"
+pydantic = "^1.10.5"

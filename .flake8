@@ -1,0 +1,20 @@
+[flake8]
+ignore =
+    E203,
+    E402,
+    E501,
+    W503,
+    B006,
+    D107,
+    F541,
+select =
+    C,
+    E,
+    F,
+    W,
+    B,
+    B950,
+    D,
+per-file-ignores =
+    test_*.py: D103
+max-line-length = 170
