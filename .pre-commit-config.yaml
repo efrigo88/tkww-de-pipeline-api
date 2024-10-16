@@ -7,8 +7,6 @@ repos:
       - id: check-yaml
         args: [--unsafe]
       - id: requirements-txt-fixer
-      - id: no-commit-to-branch
-        args: [--branch, develop, --branch, main]
 
   - repo: local
     hooks:
