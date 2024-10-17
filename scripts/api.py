@@ -49,7 +49,7 @@ def get_movies_by_genre():
 
 
 # 3. Best rated director (in average)
-@app.route('/best_director', methods=['GET'])
+@app.route("/best_director", methods=["GET"])
 def best_director():
     query = "SELECT directors, rating FROM movies"
     movies = query_db(query)
@@ -57,27 +57,30 @@ def best_director():
     director_ratings = {}
 
     for movie in movies:
-        directors = movie.get('directors')
-        rating = movie.get('rating')
+        directors = movie.get("directors")
+        rating = movie.get("rating")
 
         if directors and rating is not None:
             # Convert directors string to list
             for director in ast.literal_eval(directors):
                 if director not in director_ratings:
-                    director_ratings[director] = {'total_rating': 0, 'movie_count': 0}
+                    director_ratings[director] = {"total_rating": 0, "movie_count": 0}
 
-                director_ratings[director]['total_rating'] += rating
-                director_ratings[director]['movie_count'] += 1
+                director_ratings[director]["total_rating"] += rating
+                director_ratings[director]["movie_count"] += 1
 
     # Calculate average ratings
     avg_ratings = {
-        director: data['total_rating'] / data['movie_count']
-        for director, data in director_ratings.items() if data['movie_count'] > 0
+        director: data["total_rating"] / data["movie_count"]
+        for director, data in director_ratings.items()
+        if data["movie_count"] > 0
     }
 
     # Find the best director
     best_director = max(avg_ratings, key=avg_ratings.get)
-    return jsonify({'best_director': best_director, 'avg_rating': avg_ratings[best_director]})
+    return jsonify(
+        {"best_director": best_director, "avg_rating": avg_ratings[best_director]}
+    )
 
 
 # 4. Movies from a specific director
@@ -92,8 +95,4 @@ def get_movies_by_director():
 
 
 if __name__ == "__main__":
-    app.run(
-        host='localhost', 
-        port=4000, 
-        debug=True
-    )
+    app.run(host="localhost", port=4000, debug=True)
