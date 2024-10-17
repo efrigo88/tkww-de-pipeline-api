@@ -19,6 +19,12 @@ from helpers.helpers import (
     apply_column_transformations,
 )
 
+# Get the current working directory
+abs_path = Path(__file__).absolute()
+base_path = str(abs_path.parent.parent)
+
+db_name = f"{base_path}/tkww_movies_catalog.db"
+
 # Logging configurations.
 MSG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
 DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
@@ -85,7 +91,7 @@ def transform(df: DataFrame):
 
 def write_df(df: DataFrame):
     # Conexión a SQLite
-    conn = sqlite3.connect("tkww_movies_catalog.db")
+    conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
 
     # Create the table if it doesn't exist
@@ -159,11 +165,6 @@ if __name__ == "__main__":
 
     #     # Espera 10 segundos
     #     time.sleep(10)
-
-    # Get the current working directory
-    abs_path = Path(__file__).absolute()
-    base_path = str(abs_path.parent.parent)
-    logger.info(f"base_path: {base_path}")
 
     # File to process
     file_path = f"{base_path}/data/1.csv"
