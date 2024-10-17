@@ -43,11 +43,7 @@ def get_movies_between_years():
 def get_movies_by_genre():
     genre = request.args.get("genre")
 
-    query = """
-        SELECT *
-        FROM movies
-        WHERE genre LIKE ?
-    """
+    query = "SELECT * FROM movies WHERE genre LIKE ?"
     movies = query_db(query, ("%" + genre + "%",))
     return jsonify(list(movies))
 
@@ -89,11 +85,7 @@ def best_director():
 def get_movies_by_director():
     director = request.args.get("director")
 
-    query = """
-        SELECT *
-        FROM movies
-        WHERE directors LIKE ?
-    """
+    query = "SELECT * FROM movies WHERE directors LIKE ?"
     movies = query_db(query, ("%" + director + "%",))
 
     return jsonify(list(movies))
