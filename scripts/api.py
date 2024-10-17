@@ -5,9 +5,8 @@ from flask import Flask, jsonify, request
 
 abs_path = Path(__file__).absolute()
 base_path = str(abs_path.parent.parent)
-
-DEFAULT_FLASK_PORT = 5000
 db_name = f"{base_path}/tkww_movies_catalog.db"
+
 app = Flask(__name__)
 
 # Helper function to query the SQLite database
@@ -81,4 +80,8 @@ def get_movies_by_director():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=DEFAULT_FLASK_PORT)
+    app.run(
+        host='localhost', 
+        port=4000, 
+        debug=True
+    )
