@@ -1,6 +1,7 @@
 import time
 import logging
 import sqlite3
+from pathlib import Path
 
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
@@ -22,8 +23,6 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 logging.basicConfig(format=MSG_FORMAT, datefmt=DATETIME_FORMAT)
 logger = logging.getLogger("pyspark_logger")
 logger.setLevel(logging.INFO)
-
-FILE_PATH = "/Users/emif/Documents/tkww-de-take-home-test/data/1.csv"
 
 INITIAL_SCHEMA = T.StructType(
     [
@@ -57,6 +56,7 @@ FINAL_SCHEMA = {
 def read_file(path: str) -> DataFrame:
     df = (
         spark.read.option("multiLine", True)
+        .option("header", "false")
         .option("quote", '"')
         .option("escape", '"')
         .option("ignoreLeadingWhiteSpace", True)
@@ -68,9 +68,12 @@ def read_file(path: str) -> DataFrame:
 
 def transform(df: DataFrame):
     # Rename the first column as the id of the dataset and cast it.
-    df = df.withColumnRenamed("_c0", "id").withColumn(
-        "id", F.col("id").cast(T.IntegerType())
+    df = (
+        df.withColumnRenamed("_c0", "id")
+        .withColumn("id", F.col("id").cast(T.IntegerType()))
+        .filter(F.col("id").isNotNull())
     )
+
     df = df.withColumnRenamed("ONE-LINE", "plot")
 
     # Transformations to remove any leading or trailing whitespaces.
@@ -111,6 +114,29 @@ def write_df(df: DataFrame):
     conn = sqlite3.connect("tkww_movies_catalog.db")
     cursor = conn.cursor()
 
+    # Create the table if it doesn't exist
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS movies (
+            id INTEGER,
+            movies TEXT,
+            year_from INTEGER,
+            year_to INTEGER,
+            genre TEXT,
+            rating REAL,
+            plot TEXT,
+            stars TEXT,
+            directors TEXT,
+            votes INTEGER,
+            runtime TEXT,
+            gross REAL
+        )
+    """
+    )
+
+    # Truncata table to avoid duplications
+    cursor.execute("DELETE FROM movies")
+
     for row in df.collect():
         cursor.execute(
             """
@@ -126,10 +152,12 @@ def write_df(df: DataFrame):
                                 votes,
                                 runtime,
                                 gross)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?)
         """,
             (
-                row["movie"],
+                row["id"],
+                row["movies"],
                 row["year_from"],
                 row["year_to"],
                 row["genre"],
@@ -157,13 +185,27 @@ if __name__ == "__main__":
 
     #     # Espera 10 segundos
     #     time.sleep(10)
-    logger.info(f"Read file in path: {FILE_PATH}")
-    df = read_file(FILE_PATH)
+
+    # Get the current working directory
+    abs_path = Path(__file__).absolute()
+    base_path = str(abs_path.parent.parent)
+    logger.info(f"base_path: {base_path}")
+
+    # File to process
+    file_path = f"{base_path}/data/1.csv"
+
+    logger.info(f"Read file in path: {file_path}")
+    df = read_file(file_path)
 
     logger.info(f"Transform DataFrame")
     df = transform(df)
+    df.cache() # Caching only for visualization purposes as it's not a big dataset.
+    logger.info(f"{df.count()} rows processed")
     logger.info("DataFrame successfully processed")
 
-    logger.info("DataFrame first rows:")
+    logger.info("DataFrame preview:")
     df.show()
-    # write_df(df)
+
+    logger.info("Write DataFrame to db")
+    write_df(df)
+    logger.info("Pipeline finished successfully.")

@@ -10,7 +10,7 @@ def get_spark_session() -> SparkSession:
     # master configuration to use only 4 CPU cores
     spark = SparkSession.builder.appName("ETL").master("local[4]").getOrCreate()
     # basic configuration
-    spark.conf.set("spark.sql.shuffle.partition", 4)
+    spark.conf.set("spark.sql.shuffle.partitions", 4)
     spark.conf.set("spark.sql.session.timeZone", "UTC")
     return spark
 
