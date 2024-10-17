@@ -56,7 +56,7 @@ def transform(df: DataFrame):
 
     df = df.withColumnRenamed("ONE-LINE", "plot")
 
-    # Transformations to remove any leading or trailing whitespaces.
+    # Remove any leading or trailing whitespaces.
     transformations = {
         "genre": lambda col: F.trim(F.regexp_replace(col, "\n", "")),
         "plot": lambda col: F.trim(F.regexp_replace(col, "\n", "")),
@@ -72,21 +72,23 @@ def transform(df: DataFrame):
     df = parse_directors_and_stars(df, "stars")
     df = normalize_gross_value(df, "gross")
 
-    df = df.select(
-        "id",
-        "movies",
-        "year_from",
-        "year_to",
-        "genre",
-        "rating",
-        "plot",
-        "stars",
-        "directors",
-        "votes",
-        "runtime",
-        "gross",
+    return (
+        df
+        .select(
+            "id",
+            "movies",
+            "year_from",
+            "year_to",
+            "genre",
+            "rating",
+            "plot",
+            "stars",
+            "directors",
+            "votes",
+            "runtime",
+            "gross",
+        )
     )
-    return df
 
 
 def write_df(df: DataFrame):
@@ -114,7 +116,7 @@ def write_df(df: DataFrame):
     """
     )
 
-    # Truncata table to avoid duplications
+    # Empty the table to avoid duplications
     cursor.execute("DELETE FROM movies")
 
     for row in df.collect():
