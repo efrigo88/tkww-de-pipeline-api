@@ -54,11 +54,13 @@ The whole pipeline will start executing, It will read the source file, proccess 
 │
 ├── /data               # Folder where source data is stored.
 ├── /scripts            # PySpark and API scripts.
-│   ├── etl.py          # Pyspark e2e pipeline.
+│   ├── /helpers        # Folder containing helper functions.
+│   │   └── helpers.py  # Helper functions for the ETL process.
+│   ├── etl.py          # Pyspark e2e pipeline main logic.
 │   ├── api.py          # Flask REST API script.
 ├── database.db         # SQLite database.
 ├── pyproject.toml      # Poetry dependencies.
-└── README.md           # Intructions on how to run the project.
+└── README.md           # Instructions on how to run the project.
 ```
 
 ### Summary of Changes:

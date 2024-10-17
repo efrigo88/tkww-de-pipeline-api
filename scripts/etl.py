@@ -7,6 +7,8 @@ import pyspark.sql.types as T
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
 from helpers.helpers import (
+    FINAL_SCHEMA,
+    INITIAL_SCHEMA,
     deduplicate,
     cast_col_types,
     normalize_year,
@@ -23,34 +25,6 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 logging.basicConfig(format=MSG_FORMAT, datefmt=DATETIME_FORMAT)
 logger = logging.getLogger("pyspark_logger")
 logger.setLevel(logging.INFO)
-
-INITIAL_SCHEMA = T.StructType(
-    [
-        T.StructField("_c0", T.StringType(), True),
-        T.StructField("MOVIES", T.StringType(), True),
-        T.StructField("YEAR", T.StringType(), True),
-        T.StructField("GENRE", T.StringType(), True),
-        T.StructField("RATING", T.StringType(), True),
-        T.StructField("ONE-LINE", T.StringType(), True),
-        T.StructField("STARS", T.StringType(), True),
-        T.StructField("VOTES", T.StringType(), True),
-        T.StructField("RunTime", T.StringType(), True),
-        T.StructField("Gross", T.StringType(), True),
-    ]
-)
-
-FINAL_SCHEMA = {
-    "movies": T.StringType(),
-    "year_from": T.IntegerType(),
-    "year_to": T.IntegerType(),
-    "genre": T.StringType(),
-    "rating": T.FloatType(),
-    "plot": T.StringType(),
-    "stars": T.StringType(),
-    "votes": T.IntegerType(),
-    "runtime": T.IntegerType(),
-    "gross": T.StringType(),
-}
 
 
 def read_file(path: str) -> DataFrame:
@@ -199,7 +173,7 @@ if __name__ == "__main__":
 
     logger.info(f"Transform DataFrame")
     df = transform(df)
-    df.cache() # Caching only for visualization purposes as it's not a big dataset.
+    df.cache()  # Caching only for visualization purposes as it's not a big dataset.
     logger.info(f"{df.count()} rows processed")
     logger.info("DataFrame successfully processed")
 

@@ -5,6 +5,34 @@ import pyspark.sql.functions as F
 from pyspark.sql import Window, DataFrame, SparkSession
 from pyspark.sql.functions import col, when, row_number, regexp_extract
 
+INITIAL_SCHEMA = T.StructType(
+    [
+        T.StructField("_c0", T.StringType(), True),
+        T.StructField("MOVIES", T.StringType(), True),
+        T.StructField("YEAR", T.StringType(), True),
+        T.StructField("GENRE", T.StringType(), True),
+        T.StructField("RATING", T.StringType(), True),
+        T.StructField("ONE-LINE", T.StringType(), True),
+        T.StructField("STARS", T.StringType(), True),
+        T.StructField("VOTES", T.StringType(), True),
+        T.StructField("RunTime", T.StringType(), True),
+        T.StructField("Gross", T.StringType(), True),
+    ]
+)
+
+FINAL_SCHEMA = {
+    "movies": T.StringType(),
+    "year_from": T.IntegerType(),
+    "year_to": T.IntegerType(),
+    "genre": T.StringType(),
+    "rating": T.FloatType(),
+    "plot": T.StringType(),
+    "stars": T.StringType(),
+    "votes": T.IntegerType(),
+    "runtime": T.IntegerType(),
+    "gross": T.StringType(),
+}
+
 
 def get_spark_session() -> SparkSession:
     """
@@ -86,7 +114,9 @@ def cast_col_types(df: DataFrame, col_datatypes: Dict[str, str]) -> DataFrame:
     return df
 
 
-def deduplicate(df: DataFrame, partition_by: List[str], order_by: Dict[str, str]) -> DataFrame:
+def deduplicate(
+    df: DataFrame, partition_by: List[str], order_by: Dict[str, str]
+) -> DataFrame:
     """
     Deduplicates a DataFrame based on specified partitioning and ordering.
 
