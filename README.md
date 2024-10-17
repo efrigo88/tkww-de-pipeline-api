@@ -5,7 +5,9 @@ This is a take home test project focused on creating an ETL process and a Flask 
 ## Index
 - [Prerequisites](#prerequisites)
 - [Prepare Environment](#prepare-environment)
+- [Running the Pipeline](#running-the-pipeline)
 - [Repository Structure](#repository-structure)
+
 
 ## Prerequisites
 
@@ -32,6 +34,20 @@ poetry run pre-commit install
 poetry run pytest
 ```
 
+## Running the Pipeline
+To execute the ETL pipeline, run the following command in your terminal:
+
+1. Make sure you are inside the project:
+```shell
+cd tkww-de-take-home-test
+```
+2. Run the following command:
+```shell
+python scripts/etl.py
+```
+The whole pipeline will start executing, It will read the source file, proccess it accordingly and persist it in the database.
+
+
 ## Repository Structure
 ```
 /tkww-de-take-home-test
@@ -44,3 +60,8 @@ poetry run pytest
 ├── pyproject.toml      # Poetry dependencies.
 └── README.md           # Intructions on how to run the project.
 ```
+
+### Summary of Changes:
+- **Added "Running the Pipeline" Section**: Clear instructions on how to run the ETL pipeline using the command `python scripts/etl.py`.
+
+This updated `README.md` should provide all the necessary information for users to set up and run the project effectively.
