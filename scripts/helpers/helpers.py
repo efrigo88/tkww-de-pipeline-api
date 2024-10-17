@@ -7,11 +7,24 @@ from pyspark.sql.functions import col, when, row_number, regexp_extract
 
 
 def get_spark_session() -> SparkSession:
+    """
+    Creates and returns a Spark session configured for ETL operations.
+
+    This function initializes a Spark session with the following configurations:
+    - Uses only 4 CPU cores (master set to "local[4]")
+    - Sets the default number of shuffle partitions to 4
+    - Configures the session time zone to UTC
+
+    Returns:
+        SparkSession: A Spark session configured for data processing.
+    """
     # master configuration to use only 4 CPU cores
     spark = SparkSession.builder.appName("ETL").master("local[4]").getOrCreate()
+
     # basic configuration
     spark.conf.set("spark.sql.shuffle.partitions", 4)
     spark.conf.set("spark.sql.session.timeZone", "UTC")
+
     return spark
 
 
@@ -32,30 +45,94 @@ def apply_column_transformations(df: DataFrame, transformations: Dict) -> DataFr
 
 
 def columns_to_lower(df: DataFrame) -> DataFrame:
+    """
+    Renames all columns in the given DataFrame to lowercase.
+
+    This function iterates through each column in the DataFrame and
+    renames it to its lowercase equivalent.
+
+    Args:
+        df (DataFrame): The input DataFrame whose columns are to be renamed.
+
+    Returns:
+        DataFrame: A new DataFrame with all column names in lowercase.
+    """
     for col_name in df.columns:
         col_to_lower = col_name.lower()
         df = df.withColumnRenamed(col_name, col_to_lower)
     return df
 
 
-def cast_col_types(df: DataFrame, col_datatypes: Dict) -> DataFrame:
+def cast_col_types(df: DataFrame, col_datatypes: Dict[str, str]) -> DataFrame:
+    """
+    Casts the specified columns in the DataFrame to the given data types.
+
+    This function iterates through a dictionary of column names and their
+    desired data types, casting each column in the DataFrame to its
+    corresponding data type.
+
+    Args:
+        df (DataFrame): The input DataFrame to modify.
+        col_datatypes (Dict[str, str]): A dictionary where the keys are
+            column names and the values are the desired data types as strings
+            (e.g., 'integer', 'string', 'float').
+
+    Returns:
+        DataFrame: A new DataFrame with the specified columns cast to the
+            desired data types.
+    """
     for col_name, dtype in col_datatypes.items():
         df = df.withColumn(col_name, col(col_name).cast(dtype))
     return df
 
 
-def deduplicate(df: DataFrame, partition_by: List, order_by: Dict) -> DataFrame:
+def deduplicate(df: DataFrame, partition_by: List[str], order_by: Dict[str, str]) -> DataFrame:
+    """
+    Deduplicates a DataFrame based on specified partitioning and ordering.
+
+    This function creates a window specification based on the provided
+    columns to partition and order the DataFrame. It assigns a row number
+    to each row within its partition and filters the DataFrame to retain
+    only the first occurrence of each partition.
+
+    Args:
+        df (DataFrame): The input DataFrame to deduplicate.
+        partition_by (List[str]): A list of column names to partition the DataFrame by.
+        order_by (Dict[str, str]): A dictionary where the keys are column names
+            to order by, and the values specify the order ('asc' or 'desc').
+
+    Returns:
+        DataFrame: A new DataFrame with duplicates removed based on the
+            specified partitioning and ordering criteria.
+    """
     window_func = Window.partitionBy(partition_by).orderBy(
         *[
             F.col(col).desc() if order == "desc" else F.col(col).asc()
             for col, order in order_by.items()
         ]
     )
+
     df = df.withColumn("wf_col", row_number().over(window_func))
     return df.filter(col("wf_col") == 1).drop("wf_col")
 
 
 def normalize_year(df: DataFrame, year_col: str) -> DataFrame:
+    """
+    Normalizes the year information in the specified column of a DataFrame.
+
+    This function extracts year information from a specified column using
+    various regular expression patterns. It handles cases such as single
+    years, open-ended ranges, and year ranges, and condenses the extracted
+    information into 'year_from' and 'year_to' columns.
+
+    Args:
+        df (DataFrame): The input DataFrame containing the year information.
+        year_col (str): The name of the column containing year data.
+
+    Returns:
+        DataFrame: A new DataFrame with 'year_from' and 'year_to' normalized
+                    based on the patterns extracted from the specified column.
+    """
     # Regular expressions for different patterns
     single_year_pattern = r"\((\d{4})\)"  # Matches (YYYY)
     year_start_pattern = r"\((\d{4})–\s*\)"  # Matches open-ended ranges (YYYY– )
