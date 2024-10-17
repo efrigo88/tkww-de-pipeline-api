@@ -5,8 +5,7 @@ import sqlite3
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
-
-from scripts.helpers.helpers import (
+from helpers.helpers import (
     deduplicate,
     cast_col_types,
     normalize_year,
@@ -26,14 +25,28 @@ logger.setLevel(logging.INFO)
 
 FILE_PATH = "/Users/emif/Documents/tkww-de-take-home-test/data/1.csv"
 
-# Schema for the selected columns.
-SCHEMA = {
+INITIAL_SCHEMA = T.StructType(
+    [
+        T.StructField("_c0", T.StringType(), True),
+        T.StructField("MOVIES", T.StringType(), True),
+        T.StructField("YEAR", T.StringType(), True),
+        T.StructField("GENRE", T.StringType(), True),
+        T.StructField("RATING", T.StringType(), True),
+        T.StructField("ONE-LINE", T.StringType(), True),
+        T.StructField("STARS", T.StringType(), True),
+        T.StructField("VOTES", T.StringType(), True),
+        T.StructField("RunTime", T.StringType(), True),
+        T.StructField("Gross", T.StringType(), True),
+    ]
+)
+
+FINAL_SCHEMA = {
     "movies": T.StringType(),
     "year_from": T.IntegerType(),
     "year_to": T.IntegerType(),
     "genre": T.StringType(),
     "rating": T.FloatType(),
-    "one-line": T.StringType(),
+    "plot": T.StringType(),
     "stars": T.StringType(),
     "votes": T.IntegerType(),
     "runtime": T.IntegerType(),
@@ -43,11 +56,11 @@ SCHEMA = {
 
 def read_file(path: str) -> DataFrame:
     df = (
-        spark.read.option("header", True)
-        .option("multiLine", True)
+        spark.read.option("multiLine", True)
         .option("quote", '"')
         .option("escape", '"')
         .option("ignoreLeadingWhiteSpace", True)
+        .schema(INITIAL_SCHEMA)
         .csv(path)
     )
     return df
@@ -58,11 +71,12 @@ def transform(df: DataFrame):
     df = df.withColumnRenamed("_c0", "id").withColumn(
         "id", F.col("id").cast(T.IntegerType())
     )
+    df = df.withColumnRenamed("ONE-LINE", "plot")
 
     # Transformations to remove any leading or trailing whitespaces.
     transformations = {
         "genre": lambda col: F.trim(F.regexp_replace(col, "\n", "")),
-        "one-line": lambda col: F.trim(F.regexp_replace(col, "\n", "")),
+        "plot": lambda col: F.trim(F.regexp_replace(col, "\n", "")),
         "stars": lambda col: F.trim(F.regexp_replace(col, "\n", "")),
     }
 
@@ -71,7 +85,7 @@ def transform(df: DataFrame):
     df = apply_column_transformations(df, transformations)
     df = deduplicate(df, partition_by=["movies"], order_by={"id": "desc"})
     df = normalize_year(df, "year")
-    df = cast_col_types(df, SCHEMA)
+    df = cast_col_types(df, FINAL_SCHEMA)
     df = parse_directors_and_stars(df, "stars")
     df = normalize_gross_value(df, "gross")
 
@@ -82,7 +96,7 @@ def transform(df: DataFrame):
         "year_to",
         "genre",
         "rating",
-        "one-line",
+        "plot",
         "stars",
         "directors",
         "votes",
@@ -94,23 +108,35 @@ def transform(df: DataFrame):
 
 def write_df(df: DataFrame):
     # Conexión a SQLite
-    conn = sqlite3.connect("database.db")
+    conn = sqlite3.connect("tkww_movies_catalog.db")
     cursor = conn.cursor()
 
-    # Inserta los datos en la base de datos
     for row in df.collect():
         cursor.execute(
             """
-            INSERT INTO movies (movie, year, genre, rating, description, stars, votes, runtime, gross)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO movies (id,
+                                movies,
+                                year_from,
+                                year_to,
+                                genre,
+                                rating,
+                                plot,
+                                stars,
+                                directors,
+                                votes,
+                                runtime,
+                                gross)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 row["movie"],
-                row["year"],
+                row["year_from"],
+                row["year_to"],
                 row["genre"],
                 row["rating"],
-                row["description"],
+                row["plot"],
                 row["stars"],
+                row["directors"],
                 row["votes"],
                 row["runtime"],
                 row["gross"],
@@ -139,5 +165,5 @@ if __name__ == "__main__":
     logger.info("DataFrame successfully processed")
 
     logger.info("DataFrame first rows:")
-    df.show(100, truncate=False)
+    df.show()
     # write_df(df)
