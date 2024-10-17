@@ -19,21 +19,21 @@ def get_movies():
     genre = request.args.get('genre')
 
     query = "SELECT * FROM movies WHERE 1=1"
-    
+
     if start_year and end_year:
         query += f" AND year BETWEEN {start_year} AND {end_year}"
-    
+
     if genre:
         query += f" AND genre LIKE '%{genre}%'"
-    
+
     movies = query_db(query)
-    
+
     return jsonify(movies)
 
 @app.route('/best_director', methods=['GET'])
 def best_director():
     query = """
-    SELECT stars, AVG(rating) as avg_rating FROM movies 
+    SELECT stars, AVG(rating) as avg_rating FROM movies
     GROUP BY stars ORDER BY avg_rating DESC LIMIT 1
     """
     result = query_db(query, one=True)
