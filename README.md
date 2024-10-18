@@ -52,15 +52,18 @@ The whole pipeline will start executing, It will read the source file, proccess 
 ```
 /tkww-de-take-home-test
 │
-├── /data               # Folder where source data is stored.
-├── /scripts            # PySpark and API scripts.
-│   ├── /helpers        # Folder containing helper functions.
-│   │   └── helpers.py  # Helper functions for the ETL process.
-│   ├── etl.py          # Pyspark e2e pipeline main logic.
-│   ├── api.py          # Flask REST API script.
-├── database.db         # SQLite database.
-├── pyproject.toml      # Poetry dependencies.
-└── README.md           # Instructions on how to run the project.
+├── /data                   # Folder where source data is stored.
+├── /scripts                # PySpark and API scripts.
+│   ├── /helpers            # Folder containing helper functions.
+│   │   └── helpers.py      # Helper functions for the ETL process.
+│   ├── etl.py              # Pyspark e2e pipeline main logic.
+│   ├── api.py              # Flask REST API script.
+├── /tests                  # Tests folder.
+│   ├── /unit               # Folder containing unit tests.
+│   │   └── /helpers        # Helpers unit tests.
+├── tkww_movies_catalog.db  # SQLite database.
+├── pyproject.toml          # Poetry dependencies.
+└── README.md               # Instructions on how to run the project.
 ```
 
 ### Summary of Changes:
