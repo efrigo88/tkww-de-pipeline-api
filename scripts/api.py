@@ -49,9 +49,20 @@ def get_movies_between_years():
 def get_movies_by_genre():
     genre = request.args.get("genre")
 
+    # Validate that the 'genre' parameter is provided
+    if not genre:
+        return bad_request("'genre' parameter is required.")
+
     query = "SELECT * FROM movies WHERE genre LIKE ?"
-    movies = query_db(query, ("%" + genre + "%",))
-    return jsonify(list(movies))
+    movies_generator = query_db(query, ("%" + genre + "%",))
+
+    # Convert the generator to a list to check its contents
+    movies = list(movies_generator)
+
+    # Check if movies is empty and return a custom message
+    if not movies:
+        return jsonify({"message": f"No movies found for genre '{genre}'."}), 404
+    return jsonify(movies)
 
 
 # 3. Best rated director (in average)
@@ -94,10 +105,20 @@ def best_director():
 def get_movies_by_director():
     director = request.args.get("director")
 
-    query = "SELECT * FROM movies WHERE directors LIKE ?"
-    movies = query_db(query, ("%" + director + "%",))
+    # Validate that the 'genre' parameter is provided
+    if not director:
+        return bad_request("'director' parameter is required.")
 
-    return jsonify(list(movies))
+    query = "SELECT * FROM movies WHERE directors LIKE ?"
+    movies_generator = query_db(query, (f'%"{director}"%',))
+
+    # Convert the generator to a list to check its contents
+    movies = list(movies_generator)
+
+    # Check if movies is empty and return a custom message
+    if not movies:
+        return jsonify({"message": f"No movies found for director '{director}'."}), 404
+    return jsonify(movies)
 
 
 if __name__ == "__main__":

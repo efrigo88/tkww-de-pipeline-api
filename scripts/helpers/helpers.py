@@ -1,6 +1,6 @@
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, Optional, Generator
+from typing import Any, Dict, List, Tuple, Union, Generator
 
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
