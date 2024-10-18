@@ -1,24 +1,10 @@
 import ast
-import sqlite3
-from pathlib import Path
+import datetime
 
 from flask import Flask, jsonify, request
-
-abs_path = Path(__file__).absolute()
-base_path = str(abs_path.parent.parent)
-db_name = f"{base_path}/tkww_movies_catalog.db"
+from helpers.helpers import query_db, bad_request
 
 app = Flask(__name__)
-
-# Helper function to query the SQLite database
-def query_db(query, args=(), one=False):
-    conn = sqlite3.connect(db_name)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    cur.execute(query, args)
-    rv = cur.fetchall()
-    conn.close()
-    return (dict(row) for row in rv) if not one else dict(rv[0])
 
 
 # 1. Movies between two years
@@ -26,6 +12,26 @@ def query_db(query, args=(), one=False):
 def get_movies_between_years():
     start_year = request.args.get("start_year")
     end_year = request.args.get("end_year")
+
+    # Validate presence of parameters
+    if not start_year or not end_year:
+        return bad_request("Both 'start_year' and 'end_year' parameters are required.")
+
+    # Validate the parameters are integers
+    try:
+        start_year = int(start_year)
+        end_year = int(end_year)
+    except ValueError:
+        return bad_request("'start_year' and 'end_year' must be valid integers.")
+
+    # Validate the year range
+    current_year = datetime.datetime.now().year
+    if start_year < 1800 or end_year > current_year:
+        return bad_request(f"Years must be between 1800 and {current_year}.")
+
+    # Validate that start_year is less than or equal to end_year
+    if start_year > end_year:
+        return bad_request("'start_year' cannot be greater than 'end_year'.")
 
     query = """
         SELECT *

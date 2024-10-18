@@ -1,7 +1,6 @@
 import sys
 import logging
 import sqlite3
-from pathlib import Path
 
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
@@ -9,6 +8,8 @@ from pyspark.sql import DataFrame
 from helpers.helpers import (
     FINAL_SCHEMA,
     INITIAL_SCHEMA,
+    db_name,
+    data_path,
     deduplicate,
     cast_col_types,
     normalize_year,
@@ -18,12 +19,6 @@ from helpers.helpers import (
     parse_directors_and_stars,
     apply_column_transformations,
 )
-
-# Get the current working directory
-abs_path = Path(__file__).absolute()
-base_path = str(abs_path.parent.parent)
-
-db_name = f"{base_path}/tkww_movies_catalog.db"
 
 # Logging configurations.
 MSG_FORMAT = "%(asctime)s %(levelname)s %(name)s: %(message)s"
@@ -158,17 +153,14 @@ if __name__ == "__main__":
     logger.info(f"Get SparkSession")
     spark = get_spark_session()
 
-    # Data path
-    file_path = f"{base_path}/data/1.csv"
-
-    logger.info(f"Read file in path: {file_path}")
+    logger.info(f"Data path: {data_path}.")
     try:
-        df = read_file(file_path)
+        df = read_file(data_path)
     except Exception as e:
         logger.info(f"There is no data to process or is incorrect: {e}.")
         sys.exit(1)
 
-    logger.info(f"Transform DataFrame")
+    logger.info(f"Transform DataFrame.")
     try:
         df = transform(df)
     except Exception as e:
@@ -176,13 +168,13 @@ if __name__ == "__main__":
         sys.exit(1)
 
     df.cache()  # Caching only for visualization purposes as it's not a big dataset.
-    logger.info(f"{df.count()} rows processed")
-    logger.info("DataFrame successfully processed")
+    logger.info(f"{df.count()} rows processed.")
+    logger.info("DataFrame successfully processed.")
 
-    logger.info("DataFrame preview:")
-    df.show()
+    # logger.info("DataFrame preview:")
+    # df.show()
 
-    logger.info("Write DataFrame to db")
+    logger.info("Write DataFrame to db.")
     try:
         write_df(df)
     except Exception as e:

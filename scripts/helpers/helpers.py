@@ -1,9 +1,18 @@
-from typing import Dict, List
+import sqlite3
+from pathlib import Path
+from typing import Any, Dict, List, Tuple, Union, Optional, Generator
 
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
+from flask import Response, jsonify
 from pyspark.sql import Window, DataFrame, SparkSession
 from pyspark.sql.functions import col, when, row_number, regexp_extract
+
+# Main working paths
+abs_path = Path(__file__).absolute()
+working_dir_path = str(abs_path.parent.parent.parent)
+data_path = f"{working_dir_path}/data/1.csv"
+db_name = f"{working_dir_path}/tkww_movies_catalog.db"
 
 INITIAL_SCHEMA = T.StructType(
     [
@@ -277,3 +286,47 @@ def normalize_gross_value(df: DataFrame, gross_col: str):
     df = df.withColumn(gross_col, col(gross_col).cast("float") * 1_000_000)
 
     return df
+
+
+# Helper function to return a bad request error
+def bad_request(message: str) -> Response:
+    """
+    Returns a JSON response with a 400 Bad Request status code.
+
+    Args:
+        message (str): The error message to return in the JSON response.
+
+    Returns:
+        Response: A Flask Response object containing the error message and a 400 status code.
+    """
+    response = jsonify({"error": message})
+    response.status_code = 400
+    return response
+
+
+# Helper function to query the SQLite database
+def query_db(
+    query: str, args: Tuple = (), one: bool = False
+) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
+    """
+    Executes a query on the SQLite database and returns the results.
+
+    Args:
+        query (str): The SQL query to execute.
+        args (Tuple, optional): The parameters to pass to the SQL query. Defaults to an empty tuple.
+        one (bool, optional): If True, return only one result as a dictionary. Defaults to False.
+
+    Returns:
+        Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
+            If `one` is False, returns a generator of dictionaries (each representing a row in the result set).
+            If `one` is True, returns a single dictionary representing one row.
+    """
+    conn = sqlite3.connect(db_name)  
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute(query, args)
+    rv = cur.fetchall()
+    conn.close()
+
+    # If `one` is True, return a single row as a dictionary, else return a generator of dictionaries
+    return (dict(row) for row in rv) if not one else dict(rv[0])
