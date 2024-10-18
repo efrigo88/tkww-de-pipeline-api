@@ -6,6 +6,7 @@ This is a take home test project focused on creating an ETL process and a Flask 
 - [Prerequisites](#prerequisites)
 - [Prepare Environment](#prepare-environment)
 - [Running the Pipeline](#running-the-pipeline)
+- [Running the API](#running-the-api)
 - [Repository Structure](#repository-structure)
 
 
@@ -20,11 +21,11 @@ The following section will give you the steps to configure an environment you ne
 1. Create and configure the project virtual environment:
 ```shell
 cd tkww-de-take-home-test
-poetry env use 3.10
+poetry env use 3.10.3 # or the python 3.10 version you've got installed.
 poetry install
 ```
 
-2. Pre commit hooks installation
+2. Pre commit hooks installation (make sure the python venv is activated)
 ```shell
 poetry run pre-commit install
 ```
@@ -45,8 +46,40 @@ cd tkww-de-take-home-test
 ```shell
 python scripts/etl.py
 ```
-The whole pipeline will start executing, It will read the source file, proccess it accordingly and persist it in the database.
+The pipeline will start executing, It will read the source file, proccess it accordingly and store it in the database.
 
+
+## Running the API
+To execute the API sucessfully, run the following commands in your terminal.
+Remember to keep the terminal open while making requests, otherwise you won't be able to do so.
+
+1. Make sure you are inside the project:
+```shell
+cd tkww-de-take-home-test
+```
+2. Run the following command:
+```shell
+python scripts/api.py
+```
+3. Make API calls:
+Open the web browser of your preference and make requests as shown below:
+
+Movies between two years:
+```shell
+http://localhost:4000/movies_between_years?start_year=2000&end_year=2010
+```
+Movies from a specific genre:
+```shell
+http://localhost:4000/movies_by_genre?genre=Action
+```
+Best rated director (in average):
+```shell
+http://localhost:4000/best_director
+```
+Movies from a specific director:
+```shell
+http://localhost:4000/movies_by_director?director=Peter Jackson
+```
 
 ## Repository Structure
 ```
@@ -65,8 +98,3 @@ The whole pipeline will start executing, It will read the source file, proccess 
 ├── pyproject.toml          # Poetry dependencies.
 └── README.md               # Instructions on how to run the project.
 ```
-
-### Summary of Changes:
-- **Added "Running the Pipeline" Section**: Clear instructions on how to run the ETL pipeline using the command `python scripts/etl.py`.
-
-This updated `README.md` should provide all the necessary information for users to set up and run the project effectively.
