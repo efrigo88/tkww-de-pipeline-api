@@ -288,7 +288,6 @@ def normalize_gross_value(df: DataFrame, gross_col: str):
     return df
 
 
-# Helper function to return a bad request error
 def bad_request(message: str) -> Response:
     """
     Returns a JSON response with a 400 Bad Request status code.
@@ -304,7 +303,6 @@ def bad_request(message: str) -> Response:
     return response
 
 
-# Helper function to query the SQLite database
 def query_db(
     query: str, args: Tuple = (), one: bool = False
 ) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
