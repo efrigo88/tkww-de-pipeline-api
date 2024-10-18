@@ -1,4 +1,4 @@
-import time
+import sys
 import logging
 import sqlite3
 from pathlib import Path
@@ -72,22 +72,19 @@ def transform(df: DataFrame):
     df = parse_directors_and_stars(df, "stars")
     df = normalize_gross_value(df, "gross")
 
-    return (
-        df
-        .select(
-            "id",
-            "movies",
-            "year_from",
-            "year_to",
-            "genre",
-            "rating",
-            "plot",
-            "stars",
-            "directors",
-            "votes",
-            "runtime",
-            "gross",
-        )
+    return df.select(
+        "id",
+        "movies",
+        "year_from",
+        "year_to",
+        "genre",
+        "rating",
+        "plot",
+        "stars",
+        "directors",
+        "votes",
+        "runtime",
+        "gross",
     )
 
 
@@ -161,21 +158,23 @@ if __name__ == "__main__":
     logger.info(f"Get SparkSession")
     spark = get_spark_session()
 
-    # while True:
-    #     # Procesa un archivo CSV
-    #     process_file("/path/to/your/csv")
-
-    #     # Espera 10 segundos
-    #     time.sleep(10)
-
-    # File to process
+    # Data path
     file_path = f"{base_path}/data/1.csv"
 
     logger.info(f"Read file in path: {file_path}")
-    df = read_file(file_path)
+    try:
+        df = read_file(file_path)
+    except Exception as e:
+        logger.info(f"There is no data to process or is incorrect: {e}.")
+        sys.exit(1)
 
     logger.info(f"Transform DataFrame")
-    df = transform(df)
+    try:
+        df = transform(df)
+    except Exception as e:
+        logger.info(f"Problem found during pipeline execution. Details: {e}.")
+        sys.exit(1)
+
     df.cache()  # Caching only for visualization purposes as it's not a big dataset.
     logger.info(f"{df.count()} rows processed")
     logger.info("DataFrame successfully processed")
@@ -184,5 +183,10 @@ if __name__ == "__main__":
     df.show()
 
     logger.info("Write DataFrame to db")
-    write_df(df)
+    try:
+        write_df(df)
+    except Exception as e:
+        logger.info(f"Problem found when writing results to DB. Details: {e}.")
+        sys.exit(1)
+
     logger.info("Pipeline finished successfully.")
