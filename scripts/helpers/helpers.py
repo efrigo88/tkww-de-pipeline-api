@@ -107,6 +107,36 @@ def get_spark_session() -> SparkSession:
     return spark
 
 
+def read_csv(
+    spark_session: SparkSession,
+    path: str,
+    read_options: Dict[str, str],
+    schema: T.StructType = INITIAL_SCHEMA,
+) -> DataFrame:
+    """
+    Reads a CSV file/folder from the given path using the provided Spark session, schema, and read options.
+
+    Args:
+        spark_session (SparkSession): The Spark session used to read the file.
+        path (str): The file path or directory containing the data to be read.
+        schema (StructType): The schema to be applied to the DataFrame.
+        read_options (Dict[str, str]): A dictionary of read options to configure how the file is read.
+
+    Returns:
+        DataFrame: A Spark DataFrame containing the loaded data.
+    """
+    df_reader = spark_session.read.schema(schema)
+
+    # Add each read option to the DataFrame reader
+    for option, value in read_options.items():
+        df_reader = df_reader.option(option, value)
+
+    # Read the CSV file into a DataFrame
+    df = df_reader.csv(path)
+
+    return df
+
+
 def apply_column_transformations(df: DataFrame, transformations: Dict) -> DataFrame:
     """
     Apply transformations to a DataFrame based on the provided dictionary of transformations.

@@ -8,9 +8,9 @@ from pyspark.sql import DataFrame
 from helpers.helpers import (
     CREATE_TBL,
     FINAL_SCHEMA,
-    INITIAL_SCHEMA,
     INSERT_STATEMENT,
     db_name,
+    read_csv,
     data_path,
     deduplicate,
     cast_col_types,
@@ -28,19 +28,6 @@ DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
 logging.basicConfig(format=MSG_FORMAT, datefmt=DATETIME_FORMAT)
 logger = logging.getLogger("pyspark_logger")
 logger.setLevel(logging.INFO)
-
-
-def read_file(path: str) -> DataFrame:
-    df = (
-        spark.read.option("multiLine", True)
-        .option("header", "false")
-        .option("quote", '"')
-        .option("escape", '"')
-        .option("ignoreLeadingWhiteSpace", True)
-        .schema(INITIAL_SCHEMA)
-        .csv(path)
-    )
-    return df
 
 
 def transform(df: DataFrame):
@@ -130,13 +117,21 @@ def write_df(df: DataFrame, batch_size: int = 100):
         conn.close()
 
 
-if __name__ == "__main__":
+def main(data_path: str):
     logger.info(f"Get SparkSession")
     spark = get_spark_session()
 
     logger.info(f"Data path: {data_path}.")
     try:
-        df = read_file(data_path)
+        logger.info("Read CSV data.")
+        read_options = {
+            "multiLine": "true",
+            "header": "false",
+            "quote": '"',
+            "escape": '"',
+            "ignoreLeadingWhiteSpace": "true",
+        }
+        df = read_csv(spark, data_path, read_options)
     except Exception as e:
         logger.info(f"There is no data to process or is incorrect: {e}.")
         sys.exit(1)
@@ -162,4 +157,8 @@ if __name__ == "__main__":
         logger.info(f"Problem found when writing results to DB. Details: {e}.")
         sys.exit(1)
 
+
+if __name__ == "__main__":
+    logger.info(f"Pipeline started executing.")
+    main(data_path)
     logger.info("Pipeline finished successfully.")
