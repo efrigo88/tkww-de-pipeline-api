@@ -7,11 +7,11 @@ from pyspark.sql import DataFrame
 from helpers.helpers import (
     CREATE_TBL,
     FINAL_SCHEMA,
-    INSERT_STATEMENT,
     db_name,
     read_csv,
     data_path,
     deduplicate,
+    write_to_db,
     setup_logger,
     normalize_year,
     columns_to_lower,
@@ -26,10 +26,17 @@ logger = setup_logger("pyspark_logger")
 
 
 class Pipeline:
-    def __init__(self, data_path: str, db_path: str, read_data_config: str):
+    def __init__(
+        self,
+        data_path: str,
+        db_path: str,
+        read_data_config: str,
+        write_batch_size: int = 100,
+    ):
         self.data_path = data_path
         self.db_name = db_path
         self.read_config = read_data_config
+        self.batch_size = write_batch_size
         self.spark = get_spark_session()
 
     def read_source(self) -> DataFrame:
@@ -75,7 +82,7 @@ class Pipeline:
             "gross",
         )
 
-    def write_df(self, df: DataFrame, batch_size: int = 100):
+    def write_df(self, df: DataFrame):
         # Conexión a SQLite
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
@@ -83,36 +90,8 @@ class Pipeline:
         # Create the table if it doesn't exist
         cursor.execute(CREATE_TBL)
 
-        # Collect rows in batches
-        batch = []
         try:
-            for row in df.toLocalIterator():
-                batch.append(
-                    (
-                        row["movies"],
-                        row["year_from"],
-                        row["year_to"],
-                        row["genre"],
-                        row["rating"],
-                        row["plot"],
-                        row["stars"],
-                        row["directors"],
-                        row["votes"],
-                        row["runtime"],
-                        row["gross"],
-                    )
-                )
-
-                # When the batch is full, insert the rows
-                if len(batch) >= batch_size:
-                    cursor.executemany(INSERT_STATEMENT, batch)
-                    conn.commit()
-                    batch.clear()
-
-            # Insert any remaining rows in the batch
-            if batch:
-                cursor.executemany(INSERT_STATEMENT, batch)
-                conn.commit()
+            write_to_db(df, conn, cursor, self.batch_size)
         except Exception as e:
             conn.rollback()
             logger.info(f"Error while inserting/updating data: {e}")

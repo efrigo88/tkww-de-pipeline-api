@@ -86,7 +86,20 @@ DO UPDATE SET
 """
 
 
-def setup_logger(name: str):
+def setup_logger(name: str) -> logging.Logger:
+    """
+    Set up a logger with a specified name.
+
+    This function configures the logging format and level for the logger.
+    It creates a logger instance with the provided name and sets its
+    logging level to INFO.
+
+    Parameters:
+    name (str): The name of the logger to be created.
+
+    Returns:
+    logging.Logger: The configured logger instance.
+    """
     msg_format = "%(asctime)s %(levelname)s %(name)s: %(message)s"
     datetime_format = "%Y-%m-%d %H:%M:%S"
     logging.basicConfig(format=msg_format, datefmt=datetime_format)
@@ -371,6 +384,55 @@ def normalize_gross_value(df: DataFrame, gross_col: str):
     df = df.withColumn(gross_col, col(gross_col).cast("float") * 1_000_000)
 
     return df
+
+
+def write_to_db(
+    df: DataFrame, conn: sqlite3.Connection, cursor: sqlite3.Cursor, batch_size: int
+) -> None:
+    """
+    Write the DataFrame to a SQLite database in batches.
+
+    This function iterates over the rows of a PySpark DataFrame, collecting them into batches and
+    inserting them into a SQLite database using the provided connection and cursor.
+
+    Parameters:
+    df (DataFrame): The PySpark DataFrame containing the data to be written to the database.
+    conn (sqlite3.Connection): The SQLite database connection object.
+    cursor (sqlite3.Cursor): The cursor object to execute SQL commands.
+    batch_size (int): The number of rows to insert in each batch.
+
+    Returns:
+    None: This function does not return any value.
+    """
+    batch = []
+
+    for row in df.toLocalIterator():
+        batch.append(
+            (
+                row["movies"],
+                row["year_from"],
+                row["year_to"],
+                row["genre"],
+                row["rating"],
+                row["plot"],
+                row["stars"],
+                row["directors"],
+                row["votes"],
+                row["runtime"],
+                row["gross"],
+            )
+        )
+
+        # When the batch is full, insert the rows
+        if len(batch) >= batch_size:
+            cursor.executemany(INSERT_STATEMENT, batch)
+            conn.commit()
+            batch.clear()
+
+    # Insert any remaining rows in the batch
+    if batch:
+        cursor.executemany(INSERT_STATEMENT, batch)
+        conn.commit()
 
 
 def bad_request(message: str) -> Response:
