@@ -96,26 +96,28 @@ def write_df(df: DataFrame, batch_size: int = 100):
     batch = []
     try:
         for row in df.toLocalIterator():
-            batch.append((
-                row["movies"],
-                row["year_from"],
-                row["year_to"],
-                row["genre"],
-                row["rating"],
-                row["plot"],
-                row["stars"],
-                row["directors"],
-                row["votes"],
-                row["runtime"],
-                row["gross"],
-            ))
+            batch.append(
+                (
+                    row["movies"],
+                    row["year_from"],
+                    row["year_to"],
+                    row["genre"],
+                    row["rating"],
+                    row["plot"],
+                    row["stars"],
+                    row["directors"],
+                    row["votes"],
+                    row["runtime"],
+                    row["gross"],
+                )
+            )
 
             # When the batch is full, insert the rows
             if len(batch) >= batch_size:
                 cursor.executemany(INSERT_STATEMENT, batch)
                 conn.commit()
                 batch.clear()
-        
+
         # Insert any remaining rows in the batch
         if batch:
             cursor.executemany(INSERT_STATEMENT, batch)

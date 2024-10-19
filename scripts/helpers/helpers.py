@@ -361,7 +361,7 @@ def query_db(
             If `one` is False, returns a generator of dictionaries (each representing a row in the result set).
             If `one` is True, returns a single dictionary representing one row.
     """
-    conn = sqlite3.connect(db_name)  
+    conn = sqlite3.connect(db_name)
     conn.row_factory = sqlite3.Row
     cur = conn.cursor()
     cur.execute(query, args)
