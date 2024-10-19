@@ -3,10 +3,51 @@ import sqlite3
 import datetime
 from typing import Any, Dict, List, Tuple, Union, Generator
 
+from flasgger import Swagger
 from helpers.helpers import db_name
 from flask import Flask, Response, jsonify, request
+from pydantic import BaseModel, conint, validator, root_validator
 
+# Initialize Flask and Swagger
 app = Flask(__name__)
+swagger = Swagger(app)
+
+
+# Pydantic models for request validation
+class MoviesBetweenYearsRequest(BaseModel):
+    current_year = datetime.datetime.now().year
+    start_year: conint(ge=1800, le=current_year) # type: ignore
+    end_year: conint(ge=1800, le=current_year) # type: ignore
+
+    @root_validator(pre=True)
+    def check_years(cls, values: dict[str, Any]) -> dict[str, Any]:
+        start_year = values.get("start_year")
+        end_year = values.get("end_year")
+
+        # Ensure end_year is not smaller than start_year
+        if end_year and start_year and end_year < start_year:
+            raise ValueError("'end_year' cannot be smaller than 'start_year'.")
+        return values
+
+
+class MoviesByGenreRequest(BaseModel):
+    genre: str
+
+    @validator('genre')
+    def check_genre_not_empty(cls, value):
+        if not value or value.strip() == "":
+            raise ValueError("'genre' parameter cannot be empty.")
+        return value
+
+
+class MoviesByDirectorRequest(BaseModel):
+    director: str
+
+    @validator('director')
+    def check_director_not_empty(cls, value):
+        if not value or value.strip() == "":
+            raise ValueError("'director' parameter cannot be empty.")
+        return value
 
 
 class APIService:
@@ -14,15 +55,6 @@ class APIService:
         self.db_name = db_path
 
     def bad_request(self, message: str) -> Response:
-        """
-        Returns a JSON response with a 400 Bad Request status code.
-
-        Args:
-            message (str): The error message to return in the JSON response.
-
-        Returns:
-            Response: A Flask Response object containing the error message and a 400 status code.
-        """
         response = jsonify({"error": message})
         response.status_code = 400
         return response
@@ -30,19 +62,6 @@ class APIService:
     def query_db(
         self, query: str, args: Tuple = (), one: bool = False
     ) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
-        """
-        Executes a query on the SQLite database and returns the results.
-
-        Args:
-            query (str): The SQL query to execute.
-            args (Tuple, optional): The parameters to pass to the SQL query. Defaults to an empty tuple.
-            one (bool, optional): If True, return only one result as a dictionary. Defaults to False.
-
-        Returns:
-            Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
-                If `one` is False, returns a generator of dictionaries (each representing a row in the result set).
-                If `one` is True, returns a single dictionary representing one row.
-        """
         conn = sqlite3.connect(self.db_name)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
@@ -56,30 +75,10 @@ class APIService:
     def get_movies_between_years(
         self, start_year: int, end_year: int
     ) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
-        """
-        Retrieves movies from the database between the specified years.
-
-        Args:
-            start_year (int): The starting year for the query.
-            end_year (int): The ending year for the query.
-
-        Returns:
-            Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
-                A generator of dictionaries representing movies between the specified years.
-        """
         query = "SELECT * FROM movies WHERE year_from >= ? AND year_to <= ?"
         return self.query_db(query, (start_year, end_year))
 
     def get_movies_by_genre(self, genre: str) -> List[Dict[str, Any]]:
-        """
-        Retrieves movies from the database that match the specified genre.
-
-        Args:
-            genre (str): The genre to filter movies by.
-
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries representing movies of the specified genre.
-        """
         query = "SELECT * FROM movies WHERE genre LIKE ?"
         movies = self.query_db(query, ("%" + genre + "%",))
         # Convert the generator to a list to check its contents
@@ -88,26 +87,10 @@ class APIService:
     def get_best_director(
         self,
     ) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
-        """
-        Retrieves the directors and their corresponding ratings from the movies database.
-
-        Returns:
-            Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
-                A generator of dictionaries containing directors and their ratings.
-        """
         query = "SELECT directors, rating FROM movies"
         return self.query_db(query)
 
     def get_movies_by_director(self, director: str) -> List[Dict[str, Any]]:
-        """
-        Retrieves movies from the database by the specified director.
-
-        Args:
-            director (str): The director's name to filter movies by.
-
-        Returns:
-            List[Dict[str, Any]]: A list of dictionaries representing movies directed by the specified director.
-        """
         query = "SELECT * FROM movies WHERE directors LIKE ?"
         movies = self.query_db(query, (f'%"{director}"%',))
         # Convert the generator to a list to check its contents
@@ -115,67 +98,86 @@ class APIService:
 
 
 # Flask routes
-# 1. Movies between two years
-@app.route("/movies_between_years", methods=["GET"])  # TODO check pydantic, swagger.
+@app.route("/movies_between_years", methods=["GET"])
 def get_movies_between_years():
-    start_year = request.args.get("start_year")
-    end_year = request.args.get("end_year")
-    api_service = APIService(db_name)
-
-    # Validate presence of parameters
-    if not start_year or not end_year:
-        return api_service.bad_request(
-            "Both 'start_year' and 'end_year' parameters are required."
-        )
-
-    # Validate the parameters are integers
+    """Get movies between two years
+    ---
+    parameters:
+      - name: start_year
+        in: query
+        type: integer
+        required: true
+      - name: end_year
+        in: query
+        type: integer
+        required: true
+    responses:
+      200:
+        description: A list of movies
+        schema:
+          type: array
+          items:
+            type: object
+      400:
+        description: Bad Request
+    """
     try:
-        start_year = int(start_year)
-        end_year = int(end_year)
-    except ValueError:
-        return api_service.bad_request(
-            "'start_year' and 'end_year' must be valid integers."
+        request_data = MoviesBetweenYearsRequest(
+            start_year=request.args.get("start_year"),
+            end_year=request.args.get("end_year"),
         )
+    except ValueError as e:
+        return APIService(db_name).bad_request(str(e))
 
-    # Validate the year range
-    current_year = datetime.datetime.now().year
-    if start_year < 1800 or end_year > current_year:
-        return api_service.bad_request(
-            f"Years must be between 1800 and {current_year}."
-        )
-
-    # Validate that start_year is less than or equal to end_year
-    if start_year > end_year:
-        return api_service.bad_request(
-            "'start_year' cannot be greater than 'end_year'."
-        )
-
-    movies = api_service.get_movies_between_years(start_year, end_year)
+    movies = APIService(db_name).get_movies_between_years(
+        request_data.start_year, request_data.end_year
+    )
     return jsonify(list(movies))
 
 
-# 2. Movies from a specific genre
 @app.route("/movies_by_genre", methods=["GET"])
 def get_movies_by_genre():
-    genre = request.args.get("genre")
-    api_service = APIService(db_name)
+    """Get movies by genre
+    ---
+    parameters:
+      - name: genre
+        in: query
+        type: string
+        required: true
+    responses:
+      200:
+        description: A list of movies of the specified genre
+        schema:
+          type: array
+          items:
+            type: object
+      400:
+        description: Bad Request
+    """
+    try:
+        request_data = MoviesByGenreRequest(genre=request.args.get("genre"))
+    except ValueError as e:
+        return APIService(db_name).bad_request(str(e))
 
-    # Validate that the 'genre' parameter is provided
-    if not genre:
-        return api_service.bad_request("'genre' parameter is required.")
-    movies = api_service.get_movies_by_genre(genre)
-
-    # Check if movies is empty and return a custom message
-    if not movies:
-        return jsonify({"message": f"No movies found for genre '{genre}'."}), 404
+    movies = APIService(db_name).get_movies_by_genre(request_data.genre)
     return jsonify(movies)
 
 
-# 3. Best rated director (in average)
 @app.route("/best_director", methods=["GET"])
 def get_best_director():
-    api_service = APIService(db_name)
-    movies = api_service.get_best_director()
+    """Best rated director (in average)
+    ---
+    responses:
+      200:
+        description: Best rated director
+        schema:
+          type: array
+          items:
+            type: object
+      400:
+        description: Bad Request
+    """
+    movies = APIService(db_name).get_best_director()
 
     director_ratings = {}
 
@@ -206,20 +208,31 @@ def get_best_director():
     )
 
 
-# 4. Movies from a specific director
 @app.route("/movies_by_director", methods=["GET"])
 def get_movies_by_director():
-    director = request.args.get("director")
-    api_service = APIService(db_name)
+    """Get movies by director
+    ---
+    parameters:
+      - name: director
+        in: query
+        type: string
+        required: true
+    responses:
+      200:
+        description: A list of movies directed by the specified director
+        schema:
+          type: array
+          items:
+            type: object
+      400:
+        description: Bad Request
+    """
+    try:
+        request_data = MoviesByDirectorRequest(director=request.args.get("director"))
+    except ValueError as e:
+        return APIService(db_name).bad_request(str(e))
 
-    # Validate that the 'director' parameter is provided
-    if not director:
-        return api_service.bad_request("'director' parameter is required.")
-    movies = api_service.get_movies_by_director(director)
-
-    # Check if movies is empty and return a custom message
-    if not movies:
-        return jsonify({"message": f"No movies found for director '{director}'."}), 404
+    movies = APIService(db_name).get_movies_by_director(request_data.director)
     return jsonify(movies)
 
 
