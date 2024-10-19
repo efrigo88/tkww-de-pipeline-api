@@ -71,3 +71,6 @@ venv.bak/
 .terraform.lock.hcl
 
 sandbox
+
+# SQLite db
+*.db
