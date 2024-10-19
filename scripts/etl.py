@@ -83,7 +83,7 @@ class Pipeline:
         )
 
     def write_df(self, df: DataFrame):
-        # Conexión a SQLite
+        # Connection to SQLite
         conn = sqlite3.connect(self.db_name)
         cursor = conn.cursor()
 
