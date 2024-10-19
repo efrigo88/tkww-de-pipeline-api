@@ -62,7 +62,13 @@ cd tkww-de-take-home-test
 python scripts/api.py
 ```
 3. Make API calls:
-Open the web browser of your preference and make requests as shown below:
+You can view the full API documentation and try out the endpoints interactively via Swagger. 
+To access Swagger, open the following URL in your web browser:
+```shell
+http://localhost:4000/swagger/
+```
+
+#### Example API requests:
 
 Movies between two years:
 ```shell

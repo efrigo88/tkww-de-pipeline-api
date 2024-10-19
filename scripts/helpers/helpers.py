@@ -1,11 +1,11 @@
+import logging
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, Generator
+from typing import Dict, List, Callable
 
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
-from flask import Response, jsonify
-from pyspark.sql import Window, DataFrame, SparkSession
+from pyspark.sql import Column, Window, DataFrame, SparkSession
 from pyspark.sql.functions import col, when, row_number, regexp_extract
 
 # Main working paths
@@ -85,6 +85,28 @@ DO UPDATE SET
 """
 
 
+def setup_logger(name: str) -> logging.Logger:
+    """
+    Set up a logger with a specified name.
+
+    This function configures the logging format and level for the logger.
+    It creates a logger instance with the provided name and sets its
+    logging level to INFO.
+
+    Parameters:
+    name (str): The name of the logger to be created.
+
+    Returns:
+    logging.Logger: The configured logger instance.
+    """
+    msg_format = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    datetime_format = "%Y-%m-%d %H:%M:%S"
+    logging.basicConfig(format=msg_format, datefmt=datetime_format)
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    return logger
+
+
 def get_spark_session() -> SparkSession:
     """
     Creates and returns a Spark session configured for ETL operations.
@@ -127,29 +149,48 @@ def read_csv(
     """
     df_reader = spark_session.read.schema(schema)
 
-    # Add each read option to the DataFrame reader
-    for option, value in read_options.items():
-        df_reader = df_reader.option(option, value)
-
-    # Read the CSV file into a DataFrame
-    df = df_reader.csv(path)
-
-    return df
+    return df_reader.options(**read_options).csv(path)
 
 
-def apply_column_transformations(df: DataFrame, transformations: Dict) -> DataFrame:
+def apply_column_transformations(
+    df: DataFrame,
+    transformations: Dict[str, Callable[[Column], Column]] = None,
+    renames: Dict[str, str] = None,
+    casts: Dict[str, str] = None,
+    filter_nulls: str = None,
+) -> DataFrame:
     """
-    Apply transformations to a DataFrame based on the provided dictionary of transformations.
+    Apply transformations, renaming, casting, and filtering to a DataFrame.
 
     Parameters:
-    df: The PySpark DataFrame to transform.
-    transformations: A dictionary where keys are column names, and values are the Spark functions to apply.
+    df (DataFrame): The PySpark DataFrame to transform.
+    transformations (Dict[str, Callable[[Column], Column]], optional): A dictionary where keys are column names, and values are the Spark functions to apply. Defaults to None.
+    renames (Dict[str, str], optional): A dictionary mapping old column names to new column names. Defaults to None.
+    casts (Dict[str, str], optional): A dictionary mapping column names to target data types for casting. Defaults to None.
+    filter_nulls (str, optional): A column name to filter out rows with null values. Defaults to None.
 
     Returns:
-    Transformed DataFrame.
+    DataFrame: The transformed DataFrame.
     """
-    for col_name, func in transformations.items():
-        df = df.withColumn(col_name, func(df[col_name]))
+    # Apply column renaming if renames are provided
+    if renames:
+        for old_col, new_col in renames.items():
+            df = df.withColumnRenamed(old_col, new_col)
+
+    # Apply column casting if casts are provided
+    if casts:
+        for col_name, data_type in casts.items():
+            df = df.withColumn(col_name, F.col(col_name).cast(data_type))
+
+    # Apply column transformations if provided
+    if transformations:
+        for col_name, func in transformations.items():
+            df = df.withColumn(col_name, func(df[col_name]))
+
+    # Filter out rows with null values in the specified column, if provided
+    if filter_nulls:
+        df = df.filter(F.col(filter_nulls).isNotNull())
+
     return df
 
 
@@ -169,29 +210,6 @@ def columns_to_lower(df: DataFrame) -> DataFrame:
     for col_name in df.columns:
         col_to_lower = col_name.lower()
         df = df.withColumnRenamed(col_name, col_to_lower)
-    return df
-
-
-def cast_col_types(df: DataFrame, col_datatypes: Dict[str, str]) -> DataFrame:
-    """
-    Casts the specified columns in the DataFrame to the given data types.
-
-    This function iterates through a dictionary of column names and their
-    desired data types, casting each column in the DataFrame to its
-    corresponding data type.
-
-    Args:
-        df (DataFrame): The input DataFrame to modify.
-        col_datatypes (Dict[str, str]): A dictionary where the keys are
-            column names and the values are the desired data types as strings
-            (e.g., 'integer', 'string', 'float').
-
-    Returns:
-        DataFrame: A new DataFrame with the specified columns cast to the
-            desired data types.
-    """
-    for col_name, dtype in col_datatypes.items():
-        df = df.withColumn(col_name, col(col_name).cast(dtype))
     return df
 
 
@@ -360,43 +378,50 @@ def normalize_gross_value(df: DataFrame, gross_col: str):
     return df
 
 
-def bad_request(message: str) -> Response:
+def write_to_db(
+    df: DataFrame, conn: sqlite3.Connection, cursor: sqlite3.Cursor, batch_size: int
+) -> None:
     """
-    Returns a JSON response with a 400 Bad Request status code.
+    Write the DataFrame to a SQLite database in batches.
 
-    Args:
-        message (str): The error message to return in the JSON response.
+    This function iterates over the rows of a PySpark DataFrame, collecting them into batches and
+    inserting them into a SQLite database using the provided connection and cursor.
+
+    Parameters:
+    df (DataFrame): The PySpark DataFrame containing the data to be written to the database.
+    conn (sqlite3.Connection): The SQLite database connection object.
+    cursor (sqlite3.Cursor): The cursor object to execute SQL commands.
+    batch_size (int): The number of rows to insert in each batch.
 
     Returns:
-        Response: A Flask Response object containing the error message and a 400 status code.
+    None: This function does not return any value.
     """
-    response = jsonify({"error": message})
-    response.status_code = 400
-    return response
+    batch = []
 
+    for row in df.toLocalIterator():
+        batch.append(
+            (
+                row["movies"],
+                row["year_from"],
+                row["year_to"],
+                row["genre"],
+                row["rating"],
+                row["plot"],
+                row["stars"],
+                row["directors"],
+                row["votes"],
+                row["runtime"],
+                row["gross"],
+            )
+        )
 
-def query_db(
-    query: str, args: Tuple = (), one: bool = False
-) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
-    """
-    Executes a query on the SQLite database and returns the results.
+        # When the batch is full, insert the rows
+        if len(batch) >= batch_size:
+            cursor.executemany(INSERT_STATEMENT, batch)
+            conn.commit()
+            batch.clear()
 
-    Args:
-        query (str): The SQL query to execute.
-        args (Tuple, optional): The parameters to pass to the SQL query. Defaults to an empty tuple.
-        one (bool, optional): If True, return only one result as a dictionary. Defaults to False.
-
-    Returns:
-        Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
-            If `one` is False, returns a generator of dictionaries (each representing a row in the result set).
-            If `one` is True, returns a single dictionary representing one row.
-    """
-    conn = sqlite3.connect(db_name)
-    conn.row_factory = sqlite3.Row
-    cur = conn.cursor()
-    cur.execute(query, args)
-    rv = cur.fetchall()
-    conn.close()
-
-    # If `one` is True, return a single row as a dictionary, else return a generator of dictionaries
-    return (dict(row) for row in rv) if not one else dict(rv[0])
+    # Insert any remaining rows in the batch
+    if batch:
+        cursor.executemany(INSERT_STATEMENT, batch)
+        conn.commit()
