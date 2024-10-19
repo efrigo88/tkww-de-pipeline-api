@@ -145,7 +145,6 @@ def main(data_path: str):
 
     df.cache()  # Caching only for visualization purposes as it's not a big dataset.
     logger.info(f"{df.count()} rows processed.")
-    logger.info("DataFrame successfully processed.")
 
     # logger.info("DataFrame preview:")
     # df.show()
