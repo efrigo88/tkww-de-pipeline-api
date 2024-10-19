@@ -42,6 +42,48 @@ FINAL_SCHEMA = {
     "gross": T.StringType(),
 }
 
+CREATE_TBL = """
+CREATE TABLE IF NOT EXISTS movies (
+    movies TEXT UNIQUE,
+    year_from INTEGER,
+    year_to INTEGER,
+    genre TEXT,
+    rating REAL,
+    plot TEXT,
+    stars TEXT,
+    directors TEXT,
+    votes INTEGER,
+    runtime TEXT,
+    gross REAL
+)"""
+
+INSERT_STATEMENT = """
+INSERT INTO movies (movies,
+                    year_from,
+                    year_to,
+                    genre,
+                    rating,
+                    plot,
+                    stars,
+                    directors,
+                    votes,
+                    runtime,
+                    gross)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(movies)
+DO UPDATE SET 
+    year_from = excluded.year_from,
+    year_to = excluded.year_to,
+    genre = excluded.genre,
+    rating = excluded.rating,
+    plot = excluded.plot,
+    stars = excluded.stars,
+    directors = excluded.directors,
+    votes = excluded.votes,
+    runtime = excluded.runtime,
+    gross = excluded.gross;
+"""
+
 
 def get_spark_session() -> SparkSession:
     """

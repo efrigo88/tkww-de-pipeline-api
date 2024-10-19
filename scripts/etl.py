@@ -6,8 +6,10 @@ import pyspark.sql.types as T
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
 from helpers.helpers import (
+    CREATE_TBL,
     FINAL_SCHEMA,
     INITIAL_SCHEMA,
+    INSERT_STATEMENT,
     db_name,
     data_path,
     deduplicate,
@@ -68,7 +70,6 @@ def transform(df: DataFrame):
     df = normalize_gross_value(df, "gross")
 
     return df.select(
-        "id",
         "movies",
         "year_from",
         "year_to",
@@ -83,54 +84,19 @@ def transform(df: DataFrame):
     )
 
 
-def write_df(df: DataFrame):
+def write_df(df: DataFrame, batch_size: int = 100):
     # Conexión a SQLite
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
 
     # Create the table if it doesn't exist
-    cursor.execute(
-        """
-        CREATE TABLE IF NOT EXISTS movies (
-            id INTEGER,
-            movies TEXT,
-            year_from INTEGER,
-            year_to INTEGER,
-            genre TEXT,
-            rating REAL,
-            plot TEXT,
-            stars TEXT,
-            directors TEXT,
-            votes INTEGER,
-            runtime TEXT,
-            gross REAL
-        )
-    """
-    )
+    cursor.execute(CREATE_TBL)
 
-    # Empty the table to avoid duplications
-    cursor.execute("DELETE FROM movies")
-
-    for row in df.collect():
-        cursor.execute(
-            """
-            INSERT INTO movies (id,
-                                movies,
-                                year_from,
-                                year_to,
-                                genre,
-                                rating,
-                                plot,
-                                stars,
-                                directors,
-                                votes,
-                                runtime,
-                                gross)
-            VALUES (?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?)
-        """,
-            (
-                row["id"],
+    # Collect rows in batches
+    batch = []
+    try:
+        for row in df.toLocalIterator():
+            batch.append((
                 row["movies"],
                 row["year_from"],
                 row["year_to"],
@@ -142,11 +108,24 @@ def write_df(df: DataFrame):
                 row["votes"],
                 row["runtime"],
                 row["gross"],
-            ),
-        )
+            ))
 
-    conn.commit()
-    conn.close()
+            # When the batch is full, insert the rows
+            if len(batch) >= batch_size:
+                cursor.executemany(INSERT_STATEMENT, batch)
+                conn.commit()
+                batch.clear()
+        
+        # Insert any remaining rows in the batch
+        if batch:
+            cursor.executemany(INSERT_STATEMENT, batch)
+            conn.commit()
+    except Exception as e:
+        conn.rollback()
+        logger.info(f"Error while inserting/updating data: {e}")
+        sys.exit(1)
+    finally:
+        conn.close()
 
 
 if __name__ == "__main__":
