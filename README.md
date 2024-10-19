@@ -65,7 +65,7 @@ python scripts/api.py
 You can view the full API documentation and try out the endpoints interactively via Swagger. 
 To access Swagger, open the following URL in your web browser:
 ```shell
-http://localhost:4000/swagger/
+http://localhost:4000/apidocs/
 ```
 
 #### Example API requests:
