@@ -148,18 +148,18 @@ def read_csv(
 
 
 def apply_column_transformations(
-    df: DataFrame, 
-    transformations: Dict[str, Callable[[Column], Column]], 
+    df: DataFrame,
+    transformations: Dict[str, Callable[[Column], Column]] = None,
     renames: Dict[str, str] = None,
     casts: Dict[str, str] = None,
-    filter_nulls: str = None
+    filter_nulls: str = None,
 ) -> DataFrame:
     """
     Apply transformations, renaming, casting, and filtering to a DataFrame.
 
     Parameters:
     df (DataFrame): The PySpark DataFrame to transform.
-    transformations (Dict[str, Callable[[Column], Column]]): A dictionary where keys are column names, and values are the Spark functions to apply.
+    transformations (Dict[str, Callable[[Column], Column]], optional): A dictionary where keys are column names, and values are the Spark functions to apply. Defaults to None.
     renames (Dict[str, str], optional): A dictionary mapping old column names to new column names. Defaults to None.
     casts (Dict[str, str], optional): A dictionary mapping column names to target data types for casting. Defaults to None.
     filter_nulls (str, optional): A column name to filter out rows with null values. Defaults to None.
@@ -172,14 +172,15 @@ def apply_column_transformations(
         for old_col, new_col in renames.items():
             df = df.withColumnRenamed(old_col, new_col)
 
-    # Apply column transformations
-    for col_name, func in transformations.items():
-        df = df.withColumn(col_name, func(df[col_name]))
-
     # Apply column casting if casts are provided
     if casts:
         for col_name, data_type in casts.items():
             df = df.withColumn(col_name, F.col(col_name).cast(data_type))
+
+    # Apply column transformations if provided
+    if transformations:
+        for col_name, func in transformations.items():
+            df = df.withColumn(col_name, func(df[col_name]))
 
     # Filter out rows with null values in the specified column, if provided
     if filter_nulls:
@@ -204,29 +205,6 @@ def columns_to_lower(df: DataFrame) -> DataFrame:
     for col_name in df.columns:
         col_to_lower = col_name.lower()
         df = df.withColumnRenamed(col_name, col_to_lower)
-    return df
-
-
-def cast_col_types(df: DataFrame, col_datatypes: Dict[str, str]) -> DataFrame:
-    """
-    Casts the specified columns in the DataFrame to the given data types.
-
-    This function iterates through a dictionary of column names and their
-    desired data types, casting each column in the DataFrame to its
-    corresponding data type.
-
-    Args:
-        df (DataFrame): The input DataFrame to modify.
-        col_datatypes (Dict[str, str]): A dictionary where the keys are
-            column names and the values are the desired data types as strings
-            (e.g., 'integer', 'string', 'float').
-
-    Returns:
-        DataFrame: A new DataFrame with the specified columns cast to the
-            desired data types.
-    """
-    for col_name, dtype in col_datatypes.items():
-        df = df.withColumn(col_name, col(col_name).cast(dtype))
     return df
 
 

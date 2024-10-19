@@ -13,7 +13,6 @@ from helpers.helpers import (
     data_path,
     deduplicate,
     setup_logger,
-    cast_col_types,
     normalize_year,
     columns_to_lower,
     get_spark_session,
@@ -39,27 +38,26 @@ class Pipeline:
 
     def transform(self, df: DataFrame) -> DataFrame:
         # Define the transformations, renames, and casts
+        rename_cols = {"_c0": "id", "ONE-LINE": "plot"}
         transformations = {
             "genre": lambda col: F.trim(F.regexp_replace(col, "\n", "")),
             "plot": lambda col: F.trim(F.regexp_replace(col, "\n", "")),
             "stars": lambda col: F.trim(F.regexp_replace(col, "\n", "")),
         }
-        renames = {"_c0": "id", "ONE-LINE": "plot"}
-        casts = {"id": T.IntegerType()}
+        cast_id = {"id": T.IntegerType()}
 
         # Main pipeline transformations.
         df = apply_column_transformations(
             df,
             transformations=transformations,
-            renames=renames,
-            casts=casts,
-            filter_nulls="id",  # Filter out rows where 'id' is null
+            renames=rename_cols,
+            casts=cast_id,
+            filter_nulls="id",
         )
         df = columns_to_lower(df)
-        df = apply_column_transformations(df, transformations)
         df = deduplicate(df, partition_by=["movies"], order_by={"id": "desc"})
         df = normalize_year(df, "year")
-        df = cast_col_types(df, FINAL_SCHEMA)
+        df = apply_column_transformations(df, casts=FINAL_SCHEMA)
         df = parse_directors_and_stars(df, "stars")
         df = normalize_gross_value(df, "gross")
 
