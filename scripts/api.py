@@ -76,7 +76,7 @@ class APIService:
 
 # Flask routes
 # 1. Movies between two years
-@app.route("/movies_between_years", methods=["GET"])
+@app.route("/movies_between_years", methods=["GET"])    # TODO check pydantic, swagger.
 def get_movies_between_years():
     start_year = request.args.get("start_year")
     end_year = request.args.get("end_year")

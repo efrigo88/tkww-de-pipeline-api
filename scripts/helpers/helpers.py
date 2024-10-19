@@ -149,14 +149,7 @@ def read_csv(
     """
     df_reader = spark_session.read.schema(schema)
 
-    # Add each read option to the DataFrame reader
-    for option, value in read_options.items():
-        df_reader = df_reader.option(option, value)
-
-    # Read the CSV file into a DataFrame
-    df = df_reader.csv(path)
-
-    return df
+    return df_reader.options(**read_options).csv(path)
 
 
 def apply_column_transformations(

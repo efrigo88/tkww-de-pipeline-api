@@ -100,34 +100,24 @@ class Pipeline:
             conn.close()
 
     def execute(self):
-        logger.info(f"Data path: {data_path}.")
         try:
+            logger.info(f"Data path: {data_path}.")
             logger.info("Read CSV data.")
             df = self.read_source()
-        except Exception as e:
-            logger.info(f"There is no data to process or It's incorrect: {e}.")
-            sys.exit(1)
 
-        logger.info(f"Transform DataFrame.")
-        try:
+            logger.info(f"Transform DataFrame.")
             df = self.transform(df)
-        except Exception as e:
-            logger.info(
-                f"Problem found during pipeline transformation process. Details: {e}."
-            )
-            sys.exit(1)
 
-        df.cache()  # Caching as it's not a big dataset.
-        logger.info(f"{df.count()} rows processed.")
+            df.cache()  # Caching as it's not a big dataset.
+            logger.info(f"{df.count()} rows processed.")
+            
+            # logger.info("DataFrame preview:")
+            # df.show()
 
-        # logger.info("DataFrame preview:")
-        # df.show()
-
-        logger.info("Write DataFrame to db.")
-        try:
+            logger.info("Write DataFrame to db.")
             self.write_df(df)
         except Exception as e:
-            logger.info(f"Problem found when writing results to DB. Details: {e}.")
+            logger.info(f"Poblem found when executing the pipeline. Details: {e}.")
             sys.exit(1)
 
 
