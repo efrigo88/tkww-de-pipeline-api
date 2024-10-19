@@ -1,11 +1,12 @@
+import logging
 import sqlite3
 from pathlib import Path
-from typing import Any, Dict, List, Tuple, Union, Generator
+from typing import Any, Dict, List, Tuple, Union, Callable, Generator
 
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
 from flask import Response, jsonify
-from pyspark.sql import Window, DataFrame, SparkSession
+from pyspark.sql import Column, Window, DataFrame, SparkSession
 from pyspark.sql.functions import col, when, row_number, regexp_extract
 
 # Main working paths
@@ -85,6 +86,15 @@ DO UPDATE SET
 """
 
 
+def setup_logger(name: str):
+    msg_format = "%(asctime)s %(levelname)s %(name)s: %(message)s"
+    datetime_format = "%Y-%m-%d %H:%M:%S"
+    logging.basicConfig(format=msg_format, datefmt=datetime_format)
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    return logger
+
+
 def get_spark_session() -> SparkSession:
     """
     Creates and returns a Spark session configured for ETL operations.
@@ -137,19 +147,44 @@ def read_csv(
     return df
 
 
-def apply_column_transformations(df: DataFrame, transformations: Dict) -> DataFrame:
+def apply_column_transformations(
+    df: DataFrame, 
+    transformations: Dict[str, Callable[[Column], Column]], 
+    renames: Dict[str, str] = None,
+    casts: Dict[str, str] = None,
+    filter_nulls: str = None
+) -> DataFrame:
     """
-    Apply transformations to a DataFrame based on the provided dictionary of transformations.
+    Apply transformations, renaming, casting, and filtering to a DataFrame.
 
     Parameters:
-    df: The PySpark DataFrame to transform.
-    transformations: A dictionary where keys are column names, and values are the Spark functions to apply.
+    df (DataFrame): The PySpark DataFrame to transform.
+    transformations (Dict[str, Callable[[Column], Column]]): A dictionary where keys are column names, and values are the Spark functions to apply.
+    renames (Dict[str, str], optional): A dictionary mapping old column names to new column names. Defaults to None.
+    casts (Dict[str, str], optional): A dictionary mapping column names to target data types for casting. Defaults to None.
+    filter_nulls (str, optional): A column name to filter out rows with null values. Defaults to None.
 
     Returns:
-    Transformed DataFrame.
+    DataFrame: The transformed DataFrame.
     """
+    # Apply column renaming if renames are provided
+    if renames:
+        for old_col, new_col in renames.items():
+            df = df.withColumnRenamed(old_col, new_col)
+
+    # Apply column transformations
     for col_name, func in transformations.items():
         df = df.withColumn(col_name, func(df[col_name]))
+
+    # Apply column casting if casts are provided
+    if casts:
+        for col_name, data_type in casts.items():
+            df = df.withColumn(col_name, F.col(col_name).cast(data_type))
+
+    # Filter out rows with null values in the specified column, if provided
+    if filter_nulls:
+        df = df.filter(F.col(filter_nulls).isNotNull())
+
     return df
 
 
