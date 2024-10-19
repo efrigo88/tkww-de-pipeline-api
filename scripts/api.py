@@ -16,8 +16,8 @@ swagger = Swagger(app)
 # Pydantic models for request validation
 class MoviesBetweenYearsRequest(BaseModel):
     current_year = datetime.datetime.now().year
-    start_year: conint(ge=1800, le=current_year) # type: ignore
-    end_year: conint(ge=1800, le=current_year) # type: ignore
+    start_year: conint(ge=1800, le=current_year)  # type: ignore
+    end_year: conint(ge=1800, le=current_year)  # type: ignore
 
     @root_validator(pre=True)
     def check_years(cls, values: dict[str, Any]) -> dict[str, Any]:
@@ -33,7 +33,7 @@ class MoviesBetweenYearsRequest(BaseModel):
 class MoviesByGenreRequest(BaseModel):
     genre: str
 
-    @validator('genre')
+    @validator("genre")
     def check_genre_not_empty(cls, value):
         if not value or value.strip() == "":
             raise ValueError("'genre' parameter cannot be empty.")
@@ -43,7 +43,7 @@ class MoviesByGenreRequest(BaseModel):
 class MoviesByDirectorRequest(BaseModel):
     director: str
 
-    @validator('director')
+    @validator("director")
     def check_director_not_empty(cls, value):
         if not value or value.strip() == "":
             raise ValueError("'director' parameter cannot be empty.")
