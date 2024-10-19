@@ -1,7 +1,7 @@
 import ast
 import sqlite3
 import datetime
-from typing import Any, Dict, Tuple, Union, Generator
+from typing import Any, Dict, List, Tuple, Union, Generator
 
 from helpers.helpers import db_name
 from flask import Flask, Response, jsonify, request
@@ -53,21 +53,61 @@ class APIService:
         # If `one` is True, return a single row as a dictionary, else return a generator of dictionaries
         return (dict(row) for row in rv) if not one else dict(rv[0])
 
-    def get_movies_between_years(self, start_year, end_year):
+    def get_movies_between_years(
+        self, start_year: int, end_year: int
+    ) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
+        """
+        Retrieves movies from the database between the specified years.
+
+        Args:
+            start_year (int): The starting year for the query.
+            end_year (int): The ending year for the query.
+
+        Returns:
+            Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
+                A generator of dictionaries representing movies between the specified years.
+        """
         query = "SELECT * FROM movies WHERE year_from >= ? AND year_to <= ?"
         return self.query_db(query, (start_year, end_year))
 
-    def get_movies_by_genre(self, genre):
+    def get_movies_by_genre(self, genre: str) -> List[Dict[str, Any]]:
+        """
+        Retrieves movies from the database that match the specified genre.
+
+        Args:
+            genre (str): The genre to filter movies by.
+
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries representing movies of the specified genre.
+        """
         query = "SELECT * FROM movies WHERE genre LIKE ?"
         movies = self.query_db(query, ("%" + genre + "%",))
         # Convert the generator to a list to check its contents
         return list(movies)
 
-    def get_best_director(self):
+    def get_best_director(
+        self,
+    ) -> Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
+        """
+        Retrieves the directors and their corresponding ratings from the movies database.
+
+        Returns:
+            Union[Generator[Dict[str, Any], None, None], Dict[str, Any]]:
+                A generator of dictionaries containing directors and their ratings.
+        """
         query = "SELECT directors, rating FROM movies"
         return self.query_db(query)
 
-    def get_movies_by_director(self, director):
+    def get_movies_by_director(self, director: str) -> List[Dict[str, Any]]:
+        """
+        Retrieves movies from the database by the specified director.
+
+        Args:
+            director (str): The director's name to filter movies by.
+
+        Returns:
+            List[Dict[str, Any]]: A list of dictionaries representing movies directed by the specified director.
+        """
         query = "SELECT * FROM movies WHERE directors LIKE ?"
         movies = self.query_db(query, (f'%"{director}"%',))
         # Convert the generator to a list to check its contents
@@ -76,7 +116,7 @@ class APIService:
 
 # Flask routes
 # 1. Movies between two years
-@app.route("/movies_between_years", methods=["GET"])    # TODO check pydantic, swagger.
+@app.route("/movies_between_years", methods=["GET"])  # TODO check pydantic, swagger.
 def get_movies_between_years():
     start_year = request.args.get("start_year")
     end_year = request.args.get("end_year")
