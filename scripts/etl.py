@@ -68,7 +68,7 @@ class Pipeline:
         df = parse_directors_and_stars(df, "stars")
         df = normalize_gross_value(df, "gross")
 
-        return df.select(
+        df = df.select(
             "movies",
             "year_from",
             "year_to",
@@ -81,6 +81,8 @@ class Pipeline:
             "runtime",
             "gross",
         )
+        logger.info(f"{df.count()} rows processed.")
+        return df
 
     def write_df(self, df: DataFrame):
         # Connection to SQLite
@@ -99,23 +101,23 @@ class Pipeline:
         finally:
             conn.close()
 
-    def execute(self):
+    def execute(self, df: DataFrame, epoch_id):
+        logger.info(f"Processing epoch: {epoch_id}")
+        self.write_df(self.transform(df))
+
+    def start_streaming(self):
         try:
             logger.info(f"Data path: {data_path}.")
             logger.info("Read CSV data.")
             df = self.read_source()
 
             logger.info(f"Transform DataFrame.")
-            df = self.transform(df)
-
-            df.cache()  # Caching as it's not a big dataset.
-            logger.info(f"{df.count()} rows processed.")
-            
-            # logger.info("DataFrame preview:")
-            # df.show()
-
-            logger.info("Write DataFrame to db.")
-            self.write_df(df)
+            query = (
+                df.writeStream.foreachBatch(self.execute)
+                .option("checkpointLocation", "./checkpoints")
+                .trigger(processingTime="10 seconds")
+            ).start()
+            query.awaitTermination()
         except Exception as e:
             logger.info(f"Poblem found when executing the pipeline. Details: {e}.")
             sys.exit(1)
@@ -136,6 +138,6 @@ if __name__ == "__main__":
         data_path=data_path, db_path=db_name, read_data_config=read_options
     )
 
-    pipeline.execute()
+    pipeline.start_streaming()
 
     logger.info("Pipeline finished successfully.")
