@@ -1,6 +1,8 @@
 import sys
+import time
 import sqlite3
 
+import schedule
 import pyspark.sql.types as T
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
@@ -110,7 +112,7 @@ class Pipeline:
 
             df.cache()  # Caching as it's not a big dataset.
             logger.info(f"{df.count()} rows processed.")
-            
+
             # logger.info("DataFrame preview:")
             # df.show()
 
@@ -121,9 +123,9 @@ class Pipeline:
             sys.exit(1)
 
 
-if __name__ == "__main__":
+# Function to run the pipeline every 10 seconds
+def run_pipeline():
     logger.info(f"Pipeline started executing.")
-
     read_options = {
         "multiLine": "true",
         "header": "false",
@@ -131,11 +133,19 @@ if __name__ == "__main__":
         "escape": '"',
         "ignoreLeadingWhiteSpace": "true",
     }
-
     pipeline = Pipeline(
         data_path=data_path, db_path=db_name, read_data_config=read_options
     )
-
     pipeline.execute()
-
     logger.info("Pipeline finished successfully.")
+    logger.info("Waiting for 10 seconds...")
+
+
+if __name__ == "__main__":
+    # Schedule the pipeline to run every 10 seconds
+    schedule.every(10).seconds.do(run_pipeline)
+
+    # Keep the script running and checking for scheduled tasks
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
