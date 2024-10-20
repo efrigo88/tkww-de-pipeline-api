@@ -98,8 +98,7 @@ http://localhost:4000/movies_by_director?director=Peter Jackson
 │   ├── etl.py              # Pyspark e2e pipeline main logic.
 │   ├── api.py              # Flask REST API script.
 ├── /tests                  # Tests folder.
-│   ├── /unit               # Folder containing unit tests.
-│   │   └── /helpers        # Helpers unit tests.
+│   ├── /helpers            # Helpers unit tests folder.
 ├── tkww_movies_catalog.db  # SQLite database.
 ├── pyproject.toml          # Poetry dependencies.
 └── README.md               # Instructions on how to run the project.
