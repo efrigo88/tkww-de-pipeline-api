@@ -47,10 +47,11 @@ cd tkww-de-take-home-test
 python scripts/etl.py
 ```
 The pipeline will start executing, It will read the source file, proccess it accordingly and store it in the database.
+Remember that will run every 10 seconds, so do not close the terminal.
 
 
 ## Running the API
-To execute the API sucessfully, run the following commands in your terminal.
+To execute the API sucessfully, run the following commands in your terminal (you must run the commands in another terminal if you want to keep the pipeline going).
 Remember to keep the terminal open while making requests, otherwise you won't be able to do so.
 
 1. Make sure you are inside the project:
