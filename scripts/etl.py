@@ -7,6 +7,7 @@ import pyspark.sql.types as T
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
 from helpers.helpers import (
+    WAIT_TIME,
     CREATE_TBL,
     FINAL_SCHEMA,
     db_name,
@@ -123,7 +124,7 @@ class Pipeline:
             sys.exit(1)
 
 
-# Function to run the pipeline every 10 seconds
+# Function to run the pipeline every x seconds
 def run_pipeline():
     logger.info(f"Pipeline started executing.")
     read_options = {
@@ -138,12 +139,12 @@ def run_pipeline():
     )
     pipeline.execute()
     logger.info("Pipeline finished successfully.")
-    logger.info("Waiting for 10 seconds...")
+    logger.info(f"Waiting for {WAIT_TIME} seconds...")
 
 
 if __name__ == "__main__":
     # Schedule the pipeline to run every 10 seconds
-    schedule.every(10).seconds.do(run_pipeline)
+    schedule.every(WAIT_TIME).seconds.do(run_pipeline)
 
     # Keep the script running and checking for scheduled tasks
     while True:

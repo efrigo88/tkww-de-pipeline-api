@@ -14,6 +14,8 @@ working_dir_path = str(abs_path.parent.parent.parent)
 data_path = f"{working_dir_path}/data/1.csv"
 db_name = f"{working_dir_path}/tkww_movies_catalog.db"
 
+WAIT_TIME = 10
+
 INITIAL_SCHEMA = T.StructType(
     [
         T.StructField("_c0", T.StringType(), True),
