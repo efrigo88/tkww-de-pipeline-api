@@ -11,8 +11,11 @@ from pyspark.sql.functions import col, when, row_number, regexp_extract
 # Main working paths
 abs_path = Path(__file__).absolute()
 working_dir_path = str(abs_path.parent.parent.parent)
-data_path = f"{working_dir_path}/data/1.csv"
 db_name = f"{working_dir_path}/tkww_movies_catalog.db"
+# Path to only one file as indicated in the excercise.
+data_path = f"{working_dir_path}/data/1.csv"
+
+WAIT_TIME = 10
 
 INITIAL_SCHEMA = T.StructType(
     [
