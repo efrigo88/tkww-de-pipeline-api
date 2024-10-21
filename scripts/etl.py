@@ -96,7 +96,7 @@ class Pipeline:
             df = self.transform(df)
 
             df.cache()  # Caching as it's not a big dataset.
-            logger.info(f"{df.count()} rows processed.")
+            # logger.info(f"{df.count()} rows processed.")
 
             # logger.info("DataFrame preview:")
             # df.show()
