@@ -123,14 +123,22 @@ def run_pipeline():
     )
     pipeline.execute()
     logger.info("Pipeline finished successfully.")
-    logger.info(f"Waiting for {H.WAIT_TIME} seconds...")
+    logger.info(
+        f"Waiting for {H.WAIT_TIME} seconds. Press (Ctrl+C) to exit the program."
+    )
 
 
 if __name__ == "__main__":
-    # Schedule the pipeline to run every 10 seconds
+    # Schedule the pipeline to run every x seconds
     schedule.every(H.WAIT_TIME).seconds.do(run_pipeline)
 
-    # Keep the script running and checking for scheduled tasks
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    try:
+        # Keep the script running and checking for scheduled tasks
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
+
+    except KeyboardInterrupt:
+        # Handle keyboard interruption (Ctrl+C) gracefully.
+        logger.info("Pipeline execution interrupted. Exiting gracefully.")
+        sys.exit(0)

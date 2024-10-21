@@ -181,6 +181,7 @@ def get_best_director():
 
     director_ratings = {}
 
+    # Extract directors to cumulate ratings and movies they are in.
     for movie in movies:
         directors = movie.get("directors")
         rating = movie.get("rating")
@@ -194,14 +195,14 @@ def get_best_director():
                 director_ratings[director]["total_rating"] += rating
                 director_ratings[director]["movie_count"] += 1
 
-    # Calculate average ratings
+    # Calculate average ratings for each director.
     avg_ratings = {
         director: data["total_rating"] / data["movie_count"]
         for director, data in director_ratings.items()
         if data["movie_count"] > 0
     }
 
-    # Find the best director
+    # Find the best director.
     best_director = max(avg_ratings, key=avg_ratings.get)
     return jsonify(
         {"best_director": best_director, "avg_rating": avg_ratings[best_director]}
