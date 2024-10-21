@@ -18,10 +18,12 @@ This is a take home test project focused on creating an ETL process and a Flask 
 ## Prepare Environment
 The following section will give you the steps to configure an environment you need to create new data pipelines or run the tests locally.
 
-1. Create and configure the project virtual environment:
+1. Create, activate and configure a simple project virtual environment. (make sure python 3.10 is already installed in your system):
+
 ```shell
 cd tkww-de-take-home-test
-poetry env use 3.10.3 # or the python 3.10 version you've got installed.
+python -m venv .venv
+source .venv/bin/activate
 poetry install
 ```
 
