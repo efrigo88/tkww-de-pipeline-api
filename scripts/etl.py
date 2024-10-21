@@ -8,7 +8,6 @@ import pyspark.sql.types as T
 import pyspark.sql.functions as F
 from pyspark.sql import DataFrame
 
-# Logging configurations.
 logger = H.setup_logger("pyspark_logger")
 
 
